@@ -48,5 +48,5 @@ main() {
   done
 }
 
-## \usage doc [-h]
+## \usage doc [-h] --print-usage|--print-help <SCRIPT>
 main "$@"
