@@ -2,8 +2,6 @@
 
 ## \brief Documentation for your shell scripts!
 
-shellm-source shellm/doc
-
 if [ $# -eq 0 ]; then
   doc --print-usage "$0"
   exit 1
