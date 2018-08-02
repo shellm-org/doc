@@ -37,7 +37,7 @@ main() {
       ## \option --print-usage SCRIPT
       ## Print usage for the given script.
       --print-usage)
-        usages="$(__doc_get usage "$1")"
+        usages="$(__doc_get usage "$2")"
         echo "usage: $(echo "${usages}" | head -n1)"
         echo "${usages}" | tail -n+2 | while read -r line; do
           echo "       ${line}"
