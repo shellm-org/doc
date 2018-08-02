@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+## \brief Documentation for your shell scripts!
+
+shellm-source shellm/doc
+
+if [ $# -eq 0 ]; then
+  doc --print-usage "$0"
+  exit 1
+fi
+
+__doc_get() {
+  local re='^[[:space:]]*##[[:space:]]*[@\]'"$1"'[[:space:]]'
+  grep "${re}" "$2" | expand | sed 's/'"${re}"'*//'
+  # shellcheck disable=SC2086
+  return ${PIPESTATUS[0]}
+}
+
+main() {
+  while [ $# -ne 0 ]; do
+    case "$1" in
+      ## \option -h, --help
+      ## Print this help and exit.
+      -h|--help) doc --print-help "$0"; exit 0 ;;
+
+      ## \option --print-help SCRIPT
+      ## Print help for the given script.
+      --print-help)
+        if ! command -v shellman &>/dev/null; then
+          if ! man "$(basename "$1")"; then
+            echo "doc: please install shellman dependency with pip install shellman" >&2
+            return 1
+          fi
+          return 0
+        fi
+        shellman "$1"
+      ;;
+
+      ## \option --print-usage SCRIPT
+      ## Print usage for the given script.
+      --print-usage)
+        usages="$(__doc_get usage "$1")"
+        echo "usage: $(echo "${usages}" | head -n1)"
+        echo "${usages}" | tail -n+2 | while read -r line; do
+          echo "       ${line}"
+        done
+      ;;
+    esac
+    shift
+  done
+}
+
+## \usage doc [-h]
+main "$@"
