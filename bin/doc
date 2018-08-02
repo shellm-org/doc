@@ -25,13 +25,13 @@ main() {
       ## Print help for the given script.
       --print-help)
         if ! command -v shellman &>/dev/null; then
-          if ! man "$(basename "$1")"; then
+          if ! man "$(basename "$2")"; then
             echo "doc: please install shellman dependency with pip install shellman" >&2
             return 1
           fi
           return 0
         fi
-        shellman "$1"
+        shellman "$2"
       ;;
 
       ## \option --print-usage SCRIPT
