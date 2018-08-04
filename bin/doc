@@ -43,6 +43,10 @@ main() {
           echo "       ${line}"
         done
       ;;
+
+      ## \option --get TAG FILE
+      ## Get a specific doc tag.
+      --get) shift; __doc_get "$@" ;;
     esac
     shift
   done
