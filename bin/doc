@@ -31,9 +31,9 @@ main() {
           fi
           return 0
         fi
-        shellman "$2"
-      ;;
+        shellman --template helptext --format text "$2"
 
+        ;;
       ## \option --print-usage SCRIPT
       ## Print usage for the given script.
       --print-usage)
@@ -45,7 +45,7 @@ main() {
       ;;
 
       ## \option --get TAG FILE
-      ## Get a specific doc tag.
+      ## Get a specific doc tag (first line only).
       --get) shift; __doc_get "$@" ;;
     esac
     shift
