@@ -7,6 +7,9 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
+data_dir="/tmp/shellm_doc"
+mkdir -p "${data_dir}" &>/dev/null
+
 __doc_get() {
   local re='^[[:space:]]*##[[:space:]]*[@\]'"$1"'[[:space:]]'
   grep "${re}" "$2" | expand | sed 's/'"${re}"'*//'
@@ -14,43 +17,100 @@ __doc_get() {
   return ${PIPESTATUS[0]}
 }
 
+__cache_key() {
+  shasum <<<"$1" | cut -d' ' -f1
+}
+
+__no_cache() {
+  ! [ -f "${data_dir}/$1" ]
+}
+
+__cache() {
+  shellman -thelptext "$1" -o "${data_dir}/$2"
+}
+
+__print_cache() {
+  cat "${data_dir}/$1"
+}
+
+__clear_cache() {
+  rm "${data_dir}/$1"
+}
+
 main() {
+  local SCRIPT
+  local cache_key
+
   while [ $# -ne 0 ]; do
     case "$1" in
       ## \option -h, --help
       ## Print this help and exit.
-      -h|--help) doc --print-help "$0"; exit 0 ;;
+      -h|--help) doc "$0"; exit 0 ;;
 
-      ## \option --print-help SCRIPT
-      ## Print help for the given script.
-      --print-help)
-        if ! command -v shellman &>/dev/null; then
-          if ! man "$(basename "$2")"; then
-            echo "doc: please install shellman dependency with pip install shellman" >&2
-            return 1
-          fi
-          return 0
-        fi
-        shellman --template helptext --format text "$2"
-
-        ;;
-      ## \option --print-usage SCRIPT
+      ## \option -u, --usage SCRIPT
       ## Print usage for the given script.
-      --print-usage)
+      -u|--print-usage)
         usages="$(__doc_get usage "$2")"
         echo "usage: $(echo "${usages}" | head -n1)"
         echo "${usages}" | tail -n+2 | while read -r line; do
           echo "       ${line}"
         done
+        return 0
       ;;
 
       ## \option --get TAG FILE
       ## Get a specific doc tag (first line only).
-      --get) shift; __doc_get "$@" ;;
+      --get) shift; __doc_get "$@"; return 0 ;;
+
+      ## \option --clear-cache [FILE...]
+      ## Clear the cache for the given files, or clear all the cache.
+      --clear-cache)
+        shift
+        if [ $# -eq 0 ]; then
+          rm "${data_dir}"/* &>/dev/null
+        else
+          for arg; do
+            __clear_cache $(__cache_key "${arg}")
+          done
+        fi
+        return 0
+      ;;
+
+      ## \option --cache FILE...
+      ## Cache the help text for the given files.
+      --cache)
+        shift
+        for arg; do
+          __cache "${arg}" $(__cache_key "${arg}")
+        done
+        return 0
+      ;;
+
+      *) SCRIPT="$1" ;;
     esac
     shift
   done
+
+  if ! command -v shellman &>/dev/null; then
+    if ! man "$(basename "${SCRIPT}")"; then
+      echo "doc: please install shellman dependency with pip install shellman" >&2
+      return 1
+    fi
+    return 0
+  fi
+
+  if [ -f "${SCRIPT}" ]; then
+    cache_key=$(__cache_key "${SCRIPT}")
+    if __no_cache ${cache_key}; then
+      __cache "${SCRIPT}" ${cache_key}
+    fi
+    __print_cache ${cache_key}
+    return 0
+  else
+    echo "doc: no such file: ${SCRIPT}" >&2
+    return 1
+  fi
 }
 
-## \usage doc [-h] --print-usage|--print-help <SCRIPT>
+## \usage doc [-u] <SCRIPT>
 main "$@"
