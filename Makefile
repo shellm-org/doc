@@ -6,34 +6,34 @@ MANDIR := man
 WIKIDIR := wiki
 
 MANPAGES := $(addprefix $(MANDIR)/,doc.1 doc.sh.3)
-WIKIPAGES := $(addprefix $(WIKIDIR)/,bin/doc.md lib/doc.sh.md)
+WIKIPAGES := $(addprefix $(WIKIDIR)/,Scripts/doc.md Library/doc.sh.md)
 
 ifeq ($(PREFIX), )
 PREFIX := /usr/local
 endif
 
-all : doc
+all: doc
 
-install :
+install:
 	@./install.sh $(PREFIX)
 
-$(MANDIR)/%.1 : $(BINDIR)/%
-	@shellman --format man $< > $@
+$(MANDIR)/%.1: $(BINDIR)/%
+	@shellman -tmanpage $< -o $@
 
-$(MANDIR)/%.sh.3 : $(LIBDIR)/%.sh
-	@shellman --format man $< > $@
+$(MANDIR)/%.sh.3: $(LIBDIR)/%.sh
+	@shellman -tmanpage $< -o $@
 
-$(WIKIDIR)/bin/%.md : $(BINDIR)/%
-	@shellman --format markdown $< > $@
+$(WIKIDIR)/Scripts/%.md: $(BINDIR)/%
+	@shellman -twikipage $< -o $@
 
-$(WIKIDIR)/lib/%.sh.md : $(LIBDIR)/%.sh
-	@shellman --format markdown $< > $@
+$(WIKIDIR)/Library/%.sh.md: $(LIBDIR)/%.sh
+	@shellman -twikipage $< -o $@
 
-man : $(MANPAGES)
+man: $(MANPAGES)
 
-wiki : $(WIKIPAGES)
+wiki: $(WIKIPAGES)
 
-doc : man wiki
+doc: man wiki
 
 rmdoc:
-	@rm man/* wiki/bin/* wiki/lib/*
+	@rm man/* wiki/Scripts/* wiki/Library/*
