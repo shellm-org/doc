@@ -1,0 +1,26 @@
+.if n.ad l
+.nh
+
+.TH doc 1 "2018-08-29" "Shellman 0.2.2" "User Commands"
+
+.SH "NAME"
+doc \- Documentation for your shell scripts!
+
+.SH "SYNOPSIS"
+\fBdoc\fR [\fB\-u\fR] <\fISCRIPT\fR>
+
+.SH "OPTIONS"
+.IP "\fB\-h\fR, \fB\-\-help\fR " 4
+Print this help and exit.
+
+.IP "\fB\-u\fR, \fB\-\-usage\fR \fISCRIPT\fR" 4
+Print usage for the given script.
+
+.IP "\fB\-\-get\fR \fITAG\fR \fIFILE\fR" 4
+Get a specific doc tag (first line only).
+
+.IP "\fB\-\-clear\-cache\fR [\fIFILE\fR\.\.\.]" 4
+Clear the cache for the given files, or clear all the cache.
+
+.IP "\fB\-\-cache\fR \fIFILE\fR\.\.\." 4
+Cache the help text for the given files.
