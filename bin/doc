@@ -3,114 +3,128 @@
 ## \brief Documentation for your shell scripts!
 
 if [ $# -eq 0 ]; then
-  doc --print-usage "$0"
+  doc usage "$0"
   exit 1
 fi
 
 data_dir="/tmp/shellm_doc"
 mkdir -p "${data_dir}" &>/dev/null
 
-__doc_get() {
-  local re='^[[:space:]]*##[[:space:]]*[@\]'"$1"'[[:space:]]'
-  grep "${re}" "$2" | expand | sed 's/'"${re}"'*//'
-  # shellcheck disable=SC2086
-  return ${PIPESTATUS[0]}
+resolve_0() {
+  if [ ! -f "$1" ]; then
+    command -v "$1" 2>/dev/null
+  else
+    echo "$1"
+  fi
 }
 
-__cache_key() {
-  shasum <<<"$1" | cut -d' ' -f1
+cache_get_key() {
+  shasum "$1" | cut -d' ' -f1
 }
 
-__no_cache() {
-  ! [ -f "${data_dir}/$1" ]
+cache_has() {
+  [ -f "${data_dir}/$1" ]
 }
 
-__cache() {
+cache_set_help() {
   shellman -thelptext "$1" -o "${data_dir}/$2"
 }
 
-__print_cache() {
+cache_set_usage() {
+  shellman -tusagetext "$1" -o "${data_dir}/$2"
+}
+
+cache_set() {
+  cache_set_"${type}" "$1" "$2"
+}
+
+cache_get() {
   cat "${data_dir}/$1"
 }
 
-__clear_cache() {
+cache_clear() {
   rm "${data_dir}/$1"
 }
 
-main() {
-  local SCRIPT
+caches_clear() {
+  local arg
   local cache_key
-
-  while [ $# -ne 0 ]; do
-    case "$1" in
-      ## \option -h, --help
-      ## Print this help and exit.
-      -h|--help) doc "$0"; exit 0 ;;
-
-      ## \option -u, --usage SCRIPT
-      ## Print usage for the given script.
-      -u|--print-usage)
-        usages="$(__doc_get usage "$2")"
-        echo "usage: $(echo "${usages}" | head -n1)"
-        echo "${usages}" | tail -n+2 | while read -r line; do
-          echo "       ${line}"
-        done
-        return 0
-      ;;
-
-      ## \option --get TAG FILE
-      ## Get a specific doc tag (first line only).
-      --get) shift; __doc_get "$@"; return 0 ;;
-
-      ## \option --clear-cache [FILE...]
-      ## Clear the cache for the given files, or clear all the cache.
-      --clear-cache)
-        shift
-        if [ $# -eq 0 ]; then
-          rm "${data_dir}"/* &>/dev/null
-        else
-          for arg; do
-            __clear_cache $(__cache_key "${arg}")
-          done
-        fi
-        return 0
-      ;;
-
-      ## \option --cache FILE...
-      ## Cache the help text for the given files.
-      --cache)
-        shift
-        for arg; do
-          __cache "${arg}" $(__cache_key "${arg}")
-        done
-        return 0
-      ;;
-
-      *) SCRIPT="$1" ;;
-    esac
-    shift
-  done
-
-  if ! command -v shellman &>/dev/null; then
-    if ! man "$(basename "${SCRIPT}")"; then
-      echo "doc: please install shellman dependency with pip install shellman" >&2
-      return 1
-    fi
-    return 0
-  fi
-
-  if [ -f "${SCRIPT}" ]; then
-    cache_key=$(__cache_key "${SCRIPT}")
-    if __no_cache ${cache_key}; then
-      __cache "${SCRIPT}" ${cache_key}
-    fi
-    __print_cache ${cache_key}
-    return 0
+  if [ $# -eq 0 ]; then
+    rm "${data_dir}"/* &>/dev/null
   else
-    echo "doc: no such file: ${SCRIPT}" >&2
-    return 1
+    for arg; do
+      arg="$(resolve_0 "${arg}")" || continue
+      cache_key="$(cache_get_key "${arg}")"
+      cache_clear "usage-${cache_key}"
+      cache_clear "help-${cache_key}"
+    done
   fi
 }
 
-## \usage doc [-u] <SCRIPT>
+get() {
+  local type="$1"
+  local script
+  local cache_key
+
+  if ! script="$(resolve_0 "$2")"; then
+    echo "doc: no such file: $2" >&2
+    return 1
+  fi
+
+  cache_key="${type}-$(cache_get_key "${script}")"
+  if ! cache_has "${cache_key}"; then
+    cache_set "${script}" "${cache_key}" || return 1
+  fi
+  cache_get "${cache_key}"
+}
+
+caches_set() {
+  local arg
+  local cache_key
+  local scripts
+  local basenames
+  local shasums
+
+  for arg; do
+    arg="$(resolve_0 "${arg}")" || continue
+    scripts+=(${arg})
+    basenames+=($(basename "${arg}"))
+    shasums+=($(cache_get_key "${arg}"))
+  done
+
+  shellman "${scripts[@]}" -t helptext -o "${data_dir}/_help-{filename}"
+  shellman "${scripts[@]}" -t usagetext -o "${data_dir}/_usage-{filename}"
+
+  i=0
+  for arg in "${basenames[@]}"; do
+    ln -s "${data_dir}/_help-${arg}" "${data_dir}/help-${shasums[$i]}"
+    ln -s "${data_dir}/_usage-${arg}" "${data_dir}/usage-${shasums[$i]}"
+    (( i++ ))
+  done
+}
+
+main() {
+  case "$1" in
+    ## \option -h, --help
+    ## Print this help and exit.
+    -h|--help) doc "$0" ;;
+
+    ## \option -c, --cache SCRIPT...
+    ## Cache the help and usage text for the given scripts.
+    -c|--cache) shift; caches_set "$@" ;;
+
+    ## \option -d, --delete-cache [SCRIPT...]
+    ## Clear the cache for the given scripts, or clear all the cache.
+    -d|--delete-cache) shift; caches_clear "$@" ;;
+
+    usage) get usage "$2" ;;
+    help) get help "$2" ;;
+    *) get help "$1" ;;
+  esac
+}
+
+## \usage doc [help] SCRIPT
+## \usage doc usage SCRIPT
+## \usage doc -c SCRIPT...
+## \usage doc -d [SCRIPT...]
 main "$@"
